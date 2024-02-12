@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF Viewer with Search</title>
+  <!-- Include PDF.js library -->
+  <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.13.173/pdf.min.js"></script> -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.4.456/pdf.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+  <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.12.9/dist/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+
+  <!-- <style>
+    #viewer {
+      width: 100%;
+      height: 600px; /* Adjust height as needed */
+    } -->
+  </style>
+</head>
+<body>
+  
+<div class="row">
+
+<div class="col-sm-8" id="pdfView">
+    <embed src="https://virtualsteth-dev.s3.ap-south-1.amazonaws.com/626628.pdf" id="pdf" type="application/pdf" name="pdf" width="100%" height="750px">
+</div>
+
+<div class="col-sm-4">
+    <!-- <input type="text" id="searchInput" class="form-control" placeholder="Enter search term"> -->
+
+    <button class="btn btn-primary" onclick="searchInPDF('ANTENATAL SUMMARY')">ANTENATAL SUMMARY</button>  
+    <button class="btn btn-primary" onclick="searchInPDF('Nutritional Review')">Nutritional Review</button> 
+    <button class="btn btn-primary" onclick="searchInPDF('FAMILY HISTORY')">FAMILY HISTORY</button>
+    <!-- <button class ="btn btn-primary" onclick="searchInPDF()">Search</button> -->  
+</div>
+
+</div>
+
+ 
+  
+   
+<script>
+    // Initialize PDF.js
+    const pdfjsLib = window['pdfjs-dist/build/pdf'];
+
+    // URL of the PDF file
+    const pdfUrl = document.getElementById("pdf").src
+    
+
+    // Function to search text in PDF
+    function searchInPDF(searchText) {
+      //const searchText = searchText //document.getElementById('searchInput').value;
+      document.getElementById("pdfView").innerHTML = "";
+      document.getElementById("pdfView").innerHTML = "Please Wait..."
+      if (!searchText) return;
+
+      const searchResults = [];
+      pdfjsLib.getDocument(pdfUrl).promise.then(function(pdfDoc) {
+        const numPages = pdfDoc.numPages;
+        const searchPromises = [];
+        for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+          searchPromises.push(pdfDoc.getPage(pageNum).then(function(page) {
+            return page.getTextContent().then(function(textContent) {
+              const textItems = textContent.items;
+              const text = textItems.map(function(item) {
+                return item.str;
+              }).join('');
+              const regex = new RegExp(searchText, 'gi');
+              const matches = text.match(regex);
+              if (matches) {
+                searchResults.push(pageNum);
+              }
+            });
+          }));
+        }
+
+        Promise.all(searchPromises).then(function() {
+          if (searchResults.length > 0) {
+             // Display the first found page
+            document.getElementById("pdfView").innerHTML = ""
+            
+            document.getElementById("pdfView").innerHTML = `<embed src="${pdfUrl}#page=${searchResults.sort()[0]>1?searchResults.sort()[0]:searchResults.sort()[1]}" id="pdf" type="application/pdf" name="pdf" width="100%" height="750px">`
+            // document.getElementById("pdf").src = pdfUrl+`#page=${searchResults[0]}`
+          } else {
+            document.getElementById("pdfView").innerHTML = ""
+            
+            document.getElementById("pdfView").innerHTML = `<embed src="${pdfUrl}" id="pdf" type="application/pdf" name="pdf" width="100%" height="750px">`
+            alert('not found ');
+          }
+        });
+      });
+    }
+
+    // Function to display the specified page
+    function displayPage(pageNum) {
+      const viewerContainer = document.getElementById('viewer');
+      viewerContainer.innerHTML = ''; // Clear previous content
+      const pdfViewer = document.createElement('iframe');
+      pdfViewer.src = `viewer.html?file=${pdfUrl}#page=${pageNum}`;
+      viewerContainer.appendChild(pdfViewer);
+    }
+  </script>
+</body>
+</html>
